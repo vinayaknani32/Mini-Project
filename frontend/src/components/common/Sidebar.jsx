@@ -18,7 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 
 export default function Sidebar() {
   const { activeTab, setActiveTab } = useApp();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, setDarkMode, setLightMode } = useTheme();
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -33,24 +33,24 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-[#111827]/95 border-r border-slate-800/80 flex flex-col justify-between p-4 shrink-0 backdrop-blur-md select-none transition-colors duration-200">
+    <aside className="w-64 dark:bg-[#111827]/95 bg-white border-r dark:border-slate-800/80 border-slate-200 flex flex-col justify-between p-4 shrink-0 backdrop-blur-md select-none transition-colors duration-200">
       <div>
         {/* User Profile Card */}
-        <div className="flex items-center gap-3 p-2 mb-6 rounded-xl bg-slate-900/60 border border-slate-800/50">
+        <div className="flex items-center gap-3 p-2 mb-6 rounded-xl dark:bg-slate-900/60 bg-slate-100 border dark:border-slate-800/50 border-slate-200">
           <div className="relative">
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 p-[2px] shadow-sm">
-              <div className="w-full h-full rounded-full bg-slate-950 flex items-center justify-center font-bold text-emerald-400 text-sm">
+              <div className="w-full h-full rounded-full dark:bg-slate-950 bg-white flex items-center justify-center font-bold text-emerald-600 dark:text-emerald-400 text-sm">
                 AM
               </div>
             </div>
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-slate-950 animate-pulse" />
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 dark:ring-slate-950 ring-white animate-pulse" />
           </div>
           <div className="overflow-hidden">
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
-              <span className="text-[11px] font-medium text-emerald-400/90 tracking-wide uppercase">Profile Status</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400/90 tracking-wide uppercase">Profile Status</span>
             </div>
-            <h4 className="text-sm font-semibold text-slate-100 truncate">Alex Mercer</h4>
+            <h4 className="text-sm font-bold dark:text-slate-100 text-slate-800 truncate">Alex Mercer</h4>
           </div>
         </div>
 
@@ -65,14 +65,14 @@ export default function Sidebar() {
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                   isActive
-                    ? 'bg-slate-800/90 text-white shadow-sm border border-slate-700/60 font-semibold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                    ? 'dark:bg-slate-800/90 bg-emerald-50 dark:text-white text-emerald-950 shadow-sm border dark:border-slate-700/60 border-emerald-300 font-semibold'
+                    : 'dark:text-slate-400 text-slate-600 dark:hover:text-slate-200 hover:text-slate-900 dark:hover:bg-slate-800/40 hover:bg-slate-100'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400'}`} />
                 <span>{item.label}</span>
                 {item.id === 'match' && (
-                  <span className="ml-auto text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono">
+                  <span className="ml-auto text-[10px] dark:bg-emerald-500/20 bg-emerald-100 dark:text-emerald-300 text-emerald-800 px-1.5 py-0.5 rounded font-mono font-bold">
                     85%
                   </span>
                 )}
@@ -83,29 +83,36 @@ export default function Sidebar() {
       </div>
 
       {/* Bottom Section: Theme Toggle Pill */}
-      <div className="pt-4 border-t border-slate-800/60">
-        <div className="flex items-center justify-between p-1 bg-slate-900/80 rounded-xl border border-slate-800/80">
+      <div className="pt-4 border-t dark:border-slate-800/60 border-slate-200">
+        <div className="flex items-center justify-between p-1 dark:bg-slate-900/80 bg-slate-100 rounded-xl border dark:border-slate-800 border-slate-300">
           <button
-            onClick={() => !isDark && toggleTheme()}
-            className={`flex-1 flex items-center justify-center py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              !isDark ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+            type="button"
+            onClick={setLightMode}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              !isDark
+                ? 'bg-white text-amber-600 shadow-sm border border-slate-200'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
-            title="Light Mode"
+            title="Switch to Light Mode"
           >
             <Sun className="w-4 h-4" />
+            <span className="text-[11px]">Light</span>
           </button>
           <button
-            onClick={() => isDark && toggleTheme()}
-            className={`flex-1 flex items-center justify-center py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              isDark ? 'bg-slate-800 text-emerald-400 shadow-sm border border-slate-700/50' : 'text-slate-400 hover:text-slate-200'
+            type="button"
+            onClick={setDarkMode}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              isDark
+                ? 'bg-slate-800 text-emerald-400 shadow-sm border border-slate-700/60'
+                : 'text-slate-500 hover:text-slate-900'
             }`}
-            title="Dark Mode"
+            title="Switch to Dark Mode"
           >
             <Moon className="w-4 h-4" />
+            <span className="text-[11px]">Dark</span>
           </button>
         </div>
       </div>
     </aside>
   );
 }
-

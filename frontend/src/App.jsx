@@ -41,7 +41,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0a0f1d] text-slate-100 font-sans">
+    <div className="flex h-screen w-screen overflow-hidden dark:bg-[#0a0f1d] bg-slate-100 dark:text-slate-100 text-slate-900 font-sans transition-colors duration-200">
       {/* Left Sidebar */}
       <Sidebar />
 

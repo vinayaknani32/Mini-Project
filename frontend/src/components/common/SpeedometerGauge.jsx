@@ -35,7 +35,8 @@ export default function SpeedometerGauge({ score = 85, size = 180 }) {
         <path
           d="M 12 85 A 68 68 0 0 1 148 85"
           fill="none"
-          stroke="#1e293b"
+          stroke="currentColor"
+          className="text-slate-200 dark:text-[#1e293b]"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
@@ -63,7 +64,8 @@ export default function SpeedometerGauge({ score = 85, size = 180 }) {
             y1="85"
             x2="28"
             y2="85"
-            stroke="#e2e8f0"
+            stroke="currentColor"
+            className="text-slate-800 dark:text-slate-200"
             strokeWidth="2.5"
             strokeLinecap="round"
           />
