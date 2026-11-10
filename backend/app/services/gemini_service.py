@@ -2,80 +2,76 @@ import os
 import json
 import re
 from typing import Dict, Any, Optional
-import google.generativeai as genai
+import httpx
 from ..config import settings
 
 class GeminiService:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")
-        self.client_ready = False
-        if self.api_key:
-            try:
-                genai.configure(api_key=self.api_key)
-                self.client_ready = True
-            except Exception as e:
-                print(f"[GeminiService] Warning: Failed to configure Gemini API: {e}")
+        self.client_ready = bool(self.api_key)
 
     def update_key(self, api_key: str):
         if api_key:
             self.api_key = api_key
-            try:
-                genai.configure(api_key=self.api_key)
-                self.client_ready = True
-            except Exception as e:
-                print(f"[GeminiService] Error updating key: {e}")
+            self.client_ready = True
 
     async def generate_content_json(self, prompt: str, fallback_generator=None) -> Dict[str, Any]:
-        """Calls Gemini with JSON parsing and fallback."""
+        """Calls Gemini REST API with JSON parsing and fallback."""
         if self.client_ready and self.api_key:
-            try:
-                for model_name in ["gemini-3.8-flash", "gemini-flash-latest"]:
-                    try:
-                        model = genai.GenerativeModel(
-                            model_name,
-                            generation_config={"response_mime_type": "application/json"}
+            for model_name in ["gemini-3.8-flash", "gemini-2.5-flash"]:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                    async with httpx.AsyncClient(timeout=15.0) as client:
+                        resp = await client.post(
+                            url,
+                            json={
+                                "contents": [{"parts": [{"text": prompt}]}],
+                                "generationConfig": {"responseMimeType": "application/json"}
+                            }
                         )
-                        response = model.generate_content(prompt)
-                        if response and response.text:
-                            clean_text = response.text.strip()
-                            clean_text = re.sub(r"^```(?:json)?\s*", "", clean_text, flags=re.MULTILINE)
-                            clean_text = re.sub(r"```$", "", clean_text, flags=re.MULTILINE).strip()
-                            return json.loads(clean_text)
-                    except Exception as model_err:
-                        print(f"[GeminiService] Tried {model_name}: {model_err}")
-            except Exception as e:
-                print(f"[GeminiService] API call failed or timed out: {e}. Executing fallback engine.")
-        
-        # When Gemini is unavailable, use the built-in intelligent fallback generator
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            candidate_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                            candidate_text = re.sub(r"^```(?:json)?\s*", "", candidate_text, flags=re.MULTILINE)
+                            candidate_text = re.sub(r"```$", "", candidate_text, flags=re.MULTILINE).strip()
+                            return json.loads(candidate_text)
+                except Exception as e:
+                    print(f"[GeminiService] REST call error with {model_name}: {e}")
+
         if fallback_generator:
             return fallback_generator()
         return {}
 
     async def generate_chat_reply(self, message: str, history=None) -> str:
-        """Interactive conversational reply."""
+        """Interactive conversational reply using lightweight REST API."""
         if self.client_ready and self.api_key:
-            for model_name in ["gemini-3.8-flash", "gemini-flash-latest"]:
+            for model_name in ["gemini-3.8-flash", "gemini-2.5-flash"]:
                 try:
-                    model = genai.GenerativeModel(model_name)
-                    system_instruction = (
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                    system_prompt = (
                         "You are an expert AI Career and Productivity Coach. Provide concise, "
                         "actionable, encouraging, and high-impact advice for resumes, interviews, "
                         "skill roadmaps, and daily workplace productivity."
                     )
-                    prompt = f"{system_instruction}\nUser Question: {message}"
-                    response = model.generate_content(prompt)
-                    if response and response.text:
-                        return response.text.strip()
+                    full_prompt = f"{system_prompt}\nUser Question: {message}"
+                    async with httpx.AsyncClient(timeout=15.0) as client:
+                        resp = await client.post(
+                            url,
+                            json={"contents": [{"parts": [{"text": full_prompt}]}]}
+                        )
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
                 except Exception as e:
                     print(f"[GeminiService] Chat call error with {model_name}: {e}")
 
-        # Intelligent career fallback responses
+        # Intelligent fast fallback responses
         m = message.lower()
         if "resume" in m:
             return (
                 "To optimize your resume for ATS and recruiters: 1) Structure your bullets using the Google XYZ formula: "
                 "'Accomplished [X] as measured by [Y], by doing [Z]'. 2) Keep standard section titles like 'Work Experience' "
-                "and 'Technical Skills'. 3) Mirror keywords directly from the target job posting without stuffing."
+                "and 'Technical Skills'. 3) Mirror keywords directly from the target job posting without keyword stuffing."
             )
         elif "interview" in m:
             return (
@@ -100,4 +96,3 @@ class GeminiService:
 
 # Global singleton
 gemini_service = GeminiService()
-

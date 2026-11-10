@@ -1,7 +1,7 @@
 import re
+import math
+from collections import Counter
 from typing import Dict, Any, List, Set, Tuple
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 from .document_parser import DocumentParser
 
 # Extensive skill taxonomy organized by domain
@@ -62,20 +62,14 @@ class MatchingEngine:
 
     @classmethod
     def extract_keywords_from_jd(cls, jd_text: str, top_n: int = 15) -> List[Tuple[str, float]]:
-        """Extract highest-importance keyword tokens from JD using TF-IDF."""
-        try:
-            vectorizer = TfidfVectorizer(stop_words='english', max_features=top_n, ngram_range=(1, 2))
-            tfidf_matrix = vectorizer.fit_transform([jd_text])
-            feature_names = vectorizer.get_feature_names_out()
-            scores = tfidf_matrix.toarray()[0]
-            keyword_scores = list(zip(feature_names, scores))
-            keyword_scores.sort(key=lambda x: x[1], reverse=True)
-            return keyword_scores
-        except Exception:
-            words = [w for w in re.findall(r"[a-z]{4,}", jd_text.lower()) if w not in {"with", "from", "that", "this", "have"}]
-            from collections import Counter
-            counts = Counter(words).most_common(top_n)
-            return [(k, float(v)) for k, v in counts]
+        """Extract highest-importance keyword tokens from JD."""
+        stopwords = {
+            "with", "from", "that", "this", "have", "must", "role", "your", "will",
+            "team", "work", "years", "experience", "skills", "about", "looking", "apply"
+        }
+        words = [w for w in re.findall(r"[a-z]{4,}", jd_text.lower()) if w not in stopwords]
+        counts = Counter(words).most_common(top_n)
+        return [(k, float(v)) for k, v in counts]
 
     @classmethod
     def extract_experience_years(cls, text: str) -> float:
@@ -140,14 +134,18 @@ class MatchingEngine:
         clean_resume = cls.clean_text(resume_text)
         clean_jd = cls.clean_text(jd_text)
 
-        # 1. TF-IDF Cosine Similarity
-        try:
-            vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1, 2))
-            vectors = vectorizer.fit_transform([clean_resume, clean_jd])
-            cos_sim = cosine_similarity(vectors[0:1], vectors[1:2])[0][0]
-            semantic_score = float(cos_sim * 100)
-        except Exception:
-            semantic_score = 75.0
+        # 1. Semantic Cosine Similarity (Word frequency vectors)
+        words1 = re.findall(r"[a-z0-9]+", clean_resume)
+        words2 = re.findall(r"[a-z0-9]+", clean_jd)
+        vec1 = Counter(words1)
+        vec2 = Counter(words2)
+        intersection = set(vec1.keys()) & set(vec2.keys())
+        numerator = sum(vec1[x] * vec2[x] for x in intersection)
+        sum1 = sum(vec1[x] ** 2 for x in vec1.keys())
+        sum2 = sum(vec2[x] ** 2 for x in vec2.keys())
+        denom = math.sqrt(sum1) * math.sqrt(sum2)
+        cos_sim = (numerator / denom) if denom else 0.75
+        semantic_score = min(max(float(cos_sim * 100), 40.0), 96.0)
 
         # 2. Skill Extraction & Matching
         resume_skills = cls.extract_skills_from_text(clean_resume)

@@ -1,30 +1,27 @@
 import re
 from pathlib import Path
 from typing import Dict, Any, List
-import pymupdf
 import docx
 
 class DocumentParser:
     @staticmethod
     def extract_text_from_pdf(file_path: Path) -> str:
-        """Extract high-fidelity text from PDF using PyMuPDF (fitz)."""
+        """Extract text from PDF using pypdf with fitz fallback if installed."""
         text = ""
         try:
-            doc = pymupdf.open(str(file_path))
-            for page in doc:
-                page_text = page.get_text()
-                if page_text:
-                    text += page_text + "\n"
-            doc.close()
+            import pypdf
+            reader = pypdf.PdfReader(str(file_path))
+            for page in reader.pages:
+                p_text = page.extract_text()
+                if p_text:
+                    text += p_text + "\n"
         except Exception:
-            # Fallback to pypdf
             try:
-                import pypdf
-                reader = pypdf.PdfReader(str(file_path))
-                for page in reader.pages:
-                    p_text = page.extract_text()
-                    if p_text:
-                        text += p_text + "\n"
+                import fitz
+                doc = fitz.open(str(file_path))
+                for page in doc:
+                    text += page.get_text() + "\n"
+                doc.close()
             except Exception as e:
                 raise RuntimeError(f"Error reading PDF file: {str(e)}")
         return text.strip()

@@ -192,75 +192,101 @@ async def get_demo_analysis():
 
 @router.get("/download-report")
 async def download_annotated_pdf():
-    """Generates and serves a formatted ATS Annotated PDF Report using PyMuPDF."""
-    from fastapi.responses import FileResponse
-    import pymupdf
-
+    """Generates and serves a formatted ATS Annotated PDF Report."""
+    from fastapi.responses import FileResponse, Response
     report_path = settings.UPLOAD_DIR / "Annotated_Resume_Match_Report.pdf"
     
-    doc = pymupdf.open()
-    page = doc.new_page(width=595, height=842) # A4 size
+    try:
+        try:
+            import pymupdf as fitz
+        except ImportError:
+            import fitz
+        
+        doc = fitz.open()
+        page = doc.new_page(width=595, height=842) # A4 size
 
-    # Background header rectangle
-    header_rect = pymupdf.Rect(30, 30, 565, 110)
-    page.draw_rect(header_rect, color=(0.06, 0.1, 0.18), fill=(0.06, 0.1, 0.18))
-    
-    # Header texts
-    page.insert_text((45, 60), "AI-POWERED CAREER ASSISTANT", fontsize=11, fontname="helv", color=(0.2, 0.8, 0.5))
-    page.insert_text((45, 85), "Annotated Resume vs JD Matching Report", fontsize=16, fontname="helv", color=(1.0, 1.0, 1.0))
-    page.insert_text((45, 100), "Target Role: Sr. Project Manager | Match Score: 85%", fontsize=10, fontname="helv", color=(0.8, 0.8, 0.8))
+        # Background header rectangle
+        header_rect = fitz.Rect(30, 30, 565, 110)
+        page.draw_rect(header_rect, color=(0.06, 0.1, 0.18), fill=(0.06, 0.1, 0.18))
+        
+        # Header texts
+        page.insert_text((45, 60), "AI-POWERED CAREER ASSISTANT", fontsize=11, fontname="helv", color=(0.2, 0.8, 0.5))
+        page.insert_text((45, 85), "Annotated Resume vs JD Matching Report", fontsize=16, fontname="helv", color=(1.0, 1.0, 1.0))
+        page.insert_text((45, 100), "Target Role: Sr. Project Manager | Match Score: 85%", fontsize=10, fontname="helv", color=(0.8, 0.8, 0.8))
 
-    # Summary metrics cards
-    page.insert_text((45, 140), "EXECUTIVE COMPATIBILITY SUMMARY", fontsize=11, fontname="helv", color=(0.1, 0.7, 0.5))
-    page.insert_text((45, 160), "- Overall Match Score: 85% (High Alignment)", fontsize=10, fontname="helv", color=(0.1, 0.1, 0.1))
-    page.insert_text((45, 178), "- Estimated ATS Compatibility: 88% (Passes automated parsers)", fontsize=10, fontname="helv", color=(0.1, 0.1, 0.1))
-    page.insert_text((45, 196), "- Verified Experience: 8 Years in Engineering & Project Management", fontsize=10, fontname="helv", color=(0.1, 0.1, 0.1))
-    page.insert_text((45, 214), "- Education Match: Verified Master of Science in Computer Science (MSc)", fontsize=10, fontname="helv", color=(0.1, 0.1, 0.1))
+        # Summary metrics cards
+        page.insert_text((45, 140), "EXECUTIVE COMPATIBILITY SUMMARY", fontsize=11, fontname="helv", color=(0.1, 0.7, 0.5))
+        page.insert_text((45, 160), "- Overall Match Score: 85% (High Alignment)", fontsize=10, fontname="helv", color=(0.1, 0.1, 0.1))
+        page.insert_text((45, 178), "- Estimated ATS Compatibility: 88% (Passes automated parsers)", fontsize=10, fontname="helv", color=(0.1, 0.1, 0.1))
+        page.insert_text((45, 196), "- Verified Experience: 8 Years in Engineering & Project Management", fontsize=10, fontname="helv", color=(0.1, 0.1, 0.1))
+        page.insert_text((45, 214), "- Education Match: Verified Master of Science in Computer Science (MSc)", fontsize=10, fontname="helv", color=(0.1, 0.1, 0.1))
 
-    # Core Skills
-    page.insert_text((45, 250), "SKILLS ALIGNMENT AUDIT", fontsize=11, fontname="helv", color=(0.1, 0.7, 0.5))
-    page.insert_text((45, 270), "Verified Matching Skills: Python, Agile, Scrum, Leadership, SQL, Jira, CI/CD", fontsize=10, fontname="helv", color=(0.1, 0.5, 0.2))
-    page.insert_text((45, 288), "Recommended Missing Skills to Add: Docker, Kubernetes, AWS Cloud Architecture", fontsize=10, fontname="helv", color=(0.7, 0.4, 0.0))
-    page.insert_text((45, 306), "Important Missing Keywords: Enterprise SLA Delivery, Microservices, Budgeting", fontsize=10, fontname="helv", color=(0.8, 0.1, 0.1))
+        # Core Skills
+        page.insert_text((45, 250), "SKILLS ALIGNMENT AUDIT", fontsize=11, fontname="helv", color=(0.1, 0.7, 0.5))
+        page.insert_text((45, 270), "Verified Matching Skills: Python, Agile, Scrum, Leadership, SQL, Jira, CI/CD", fontsize=10, fontname="helv", color=(0.1, 0.5, 0.2))
+        page.insert_text((45, 288), "Recommended Missing Skills to Add: Docker, Kubernetes, AWS Cloud Architecture", fontsize=10, fontname="helv", color=(0.7, 0.4, 0.0))
+        page.insert_text((45, 306), "Important Missing Keywords: Enterprise SLA Delivery, Microservices, Budgeting", fontsize=10, fontname="helv", color=(0.8, 0.1, 0.1))
 
-    # ATS Checks
-    page.insert_text((45, 340), "ATS COMPATIBILITY AUDIT CHECKLIST", fontsize=11, fontname="helv", color=(0.1, 0.7, 0.5))
-    page.insert_text((45, 360), "[PASS] Font Check: Clean modern sans-serif typography detected", fontsize=9.5, fontname="helv", color=(0.1, 0.5, 0.2))
-    page.insert_text((45, 376), "[PASS] Header Parsing: Standard headings identified (Work Experience, Skills, Education)", fontsize=9.5, fontname="helv", color=(0.1, 0.5, 0.2))
-    page.insert_text((45, 392), "[PASS] Table Detection: Linear text hierarchy without unparseable table locks", fontsize=9.5, fontname="helv", color=(0.1, 0.5, 0.2))
-    page.insert_text((45, 408), "[84%] Keyword Density: 13 of 15 essential job description keywords found", fontsize=9.5, fontname="helv", color=(0.1, 0.1, 0.1))
+        # ATS Checks
+        page.insert_text((45, 340), "ATS COMPATIBILITY AUDIT CHECKLIST", fontsize=11, fontname="helv", color=(0.1, 0.7, 0.5))
+        page.insert_text((45, 360), "[PASS] Font Check: Clean modern sans-serif typography detected", fontsize=9.5, fontname="helv", color=(0.1, 0.5, 0.2))
+        page.insert_text((45, 376), "[PASS] Header Parsing: Standard headings identified (Work Experience, Skills, Education)", fontsize=9.5, fontname="helv", color=(0.1, 0.5, 0.2))
+        page.insert_text((45, 392), "[PASS] Table Detection: Linear text hierarchy without unparseable table locks", fontsize=9.5, fontname="helv", color=(0.1, 0.5, 0.2))
+        page.insert_text((45, 408), "[84%] Keyword Density: 13 of 15 essential job description keywords found", fontsize=9.5, fontname="helv", color=(0.1, 0.1, 0.1))
 
-    # AI Suggested Rewrites
-    page.insert_text((45, 440), "AI BULLET POINT REWRITES (Google XYZ Framework)", fontsize=11, fontname="helv", color=(0.1, 0.7, 0.5))
-    page.insert_text((45, 460), "1. Weak: 'Managed a team'", fontsize=9, fontname="helv", color=(0.5, 0.5, 0.5))
-    page.insert_text((45, 474), "   Rewrite: Led a 10-person cross-functional engineering team delivering critical sprint milestones 2 weeks early.", fontsize=9, fontname="helv", color=(0.0, 0.4, 0.2))
-    
-    page.insert_text((45, 494), "2. Weak: 'Responsible for daily standups'", fontsize=9, fontname="helv", color=(0.5, 0.5, 0.5))
-    page.insert_text((45, 508), "   Rewrite: Orchestrated bi-weekly Agile sprint ceremonies and daily scrums, accelerating release velocity by 24%.", fontsize=9, fontname="helv", color=(0.0, 0.4, 0.2))
+        # AI Suggested Rewrites
+        page.insert_text((45, 440), "AI BULLET POINT REWRITES (Google XYZ Framework)", fontsize=11, fontname="helv", color=(0.1, 0.7, 0.5))
+        page.insert_text((45, 460), "1. Weak: 'Managed a team'", fontsize=9, fontname="helv", color=(0.5, 0.5, 0.5))
+        page.insert_text((45, 474), "   Rewrite: Led a 10-person cross-functional engineering team delivering critical sprint milestones 2 weeks early.", fontsize=9, fontname="helv", color=(0.0, 0.4, 0.2))
+        
+        page.insert_text((45, 494), "2. Weak: 'Responsible for daily standups'", fontsize=9, fontname="helv", color=(0.5, 0.5, 0.5))
+        page.insert_text((45, 508), "   Rewrite: Orchestrated bi-weekly Agile sprint ceremonies and daily scrums, accelerating release velocity by 24%.", fontsize=9, fontname="helv", color=(0.0, 0.4, 0.2))
 
-    page.insert_text((45, 528), "3. Weak: 'Worked on python automation scripts'", fontsize=9, fontname="helv", color=(0.5, 0.5, 0.5))
-    page.insert_text((45, 542), "   Rewrite: Architected Python ETL and CI/CD automation pipelines, reducing manual deployment overhead by 15 hrs/wk.", fontsize=9, fontname="helv", color=(0.0, 0.4, 0.2))
+        page.insert_text((45, 528), "3. Weak: 'Worked on python automation scripts'", fontsize=9, fontname="helv", color=(0.5, 0.5, 0.5))
+        page.insert_text((45, 542), "   Rewrite: Architected Python ETL and CI/CD automation pipelines, reducing manual deployment overhead by 15 hrs/wk.", fontsize=9, fontname="helv", color=(0.0, 0.4, 0.2))
 
-    # Tailored Professional Summary
-    page.insert_text((45, 575), "TAILORED PROFESSIONAL SUMMARY", fontsize=11, fontname="helv", color=(0.1, 0.7, 0.5))
-    summary_box = (
-        "\"Results-driven Senior Project Manager with 8+ years of experience leading cross-functional teams, "
-        "optimizing sprint workflows, and architecting resilient Python and cloud platforms. Proven track record of "
-        "delivering enterprise project roadmaps on schedule and under budget.\""
-    )
-    page.insert_text((45, 595), summary_box, fontsize=9.5, fontname="helv", color=(0.2, 0.2, 0.2))
+        # Tailored Professional Summary
+        page.insert_text((45, 575), "TAILORED PROFESSIONAL SUMMARY", fontsize=11, fontname="helv", color=(0.1, 0.7, 0.5))
+        summary_box = (
+            "\"Results-driven Senior Project Manager with 8+ years of experience leading cross-functional teams, "
+            "optimizing sprint workflows, and architecting resilient Python and cloud platforms. Proven track record of "
+            "delivering enterprise project roadmaps on schedule and under budget.\""
+        )
+        page.insert_text((45, 595), summary_box, fontsize=9.5, fontname="helv", color=(0.2, 0.2, 0.2))
 
-    # Disclaimer footer
-    footer_text = "Disclaimer: This compatibility match score is an algorithmic estimate based on semantic and keyword analysis, not a guaranteed hiring prediction."
-    page.insert_text((45, 790), footer_text, fontsize=8, fontname="helv", color=(0.5, 0.5, 0.5))
+        # Disclaimer footer
+        footer_text = "Disclaimer: This compatibility match score is an algorithmic estimate based on semantic and keyword analysis, not a guaranteed hiring prediction."
+        page.insert_text((45, 790), footer_text, fontsize=8, fontname="helv", color=(0.5, 0.5, 0.5))
 
-    doc.save(str(report_path))
-    doc.close()
+        doc.save(str(report_path))
+        doc.close()
 
-    return FileResponse(
-        path=str(report_path),
-        filename="Annotated_Resume_Match_Report.pdf",
-        media_type="application/pdf"
-    )
+        return FileResponse(
+            path=str(report_path),
+            filename="Annotated_Resume_Match_Report.pdf",
+            media_type="application/pdf"
+        )
+    except Exception as e:
+        # Fallback text format if PDF binary engine is not available
+        content = (
+            "AI-POWERED CAREER ASSISTANT - MATCH REPORT\n"
+            "===========================================\n"
+            "Target Role: Sr. Project Manager | Match Score: 85%\n\n"
+            "EXECUTIVE SUMMARY:\n"
+            "- Overall Match Score: 85%\n"
+            "- ATS Compatibility: 88%\n"
+            "- Verified Experience: 8 Years\n\n"
+            "SKILLS:\n"
+            "- Matching Skills: Python, Agile, Scrum, Leadership, SQL, Jira, CI/CD\n"
+            "- Missing Skills to Learn: Docker, Kubernetes, AWS\n\n"
+            "AI SUGGESTED BULLET REWRITES:\n"
+            "1. Led a 10-person cross-functional engineering team delivering critical sprint milestones 2 weeks early.\n"
+            "2. Orchestrated bi-weekly Agile sprint ceremonies and daily scrums, accelerating release velocity by 24%.\n"
+        )
+        return Response(
+            content=content,
+            media_type="text/plain",
+            headers={"Content-Disposition": "attachment; filename=Resume_Match_Report.txt"}
+        )
 
 
