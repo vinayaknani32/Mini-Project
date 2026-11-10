@@ -8,3 +8,4 @@ echo If prompted, authenticate in your browser.
 echo.
 npx vercel --prod
 pause
+
