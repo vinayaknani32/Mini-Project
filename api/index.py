@@ -3,48 +3,65 @@ import sys
 from pathlib import Path
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+import httpx
 
-BACKEND_URL = os.environ.get("BACKEND_URL")
+app = FastAPI(title="API Gateway Service")
 
-if BACKEND_URL:
-    import httpx
-    app = FastAPI(title="API Gateway Service")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# Connect to backend service via Vercel service binding
+client = httpx.AsyncClient(timeout=60.0)
 
-    client = httpx.AsyncClient(base_url=BACKEND_URL.rstrip("/"), timeout=60.0)
+# Import routes directly as well for hybrid resiliency
+ROOT_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = ROOT_DIR / "backend"
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
-    @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
-    async def proxy_to_backend(request: Request, path: str):
-        """Proxies requests to the internal backend service via BACKEND_URL."""
-        # Ensure path retains /api prefix expected by backend
+try:
+    from app.api.router import api_router
+    app.include_router(api_router, prefix="/api")
+except Exception as e:
+    print(f"Direct route mount notice: {e}")
+
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
+async def proxy_or_handle(request: Request, path: str):
+    backend_url = os.environ.get("BACKEND_URL")
+    if backend_url:
         target_path = f"/{path}" if path.startswith("api") else f"/api/{path}"
-        url = httpx.URL(path=target_path, query=request.url.query.encode("utf-8"))
+        url = f"{backend_url.rstrip('/')}{target_path}"
         body = await request.body()
         headers = dict(request.headers)
         headers.pop("host", None)
 
-        response = await client.request(
-            method=request.method,
-            url=url,
-            headers=headers,
-            content=body
-        )
-        return Response(
-            content=response.content,
-            status_code=response.status_code,
-            headers=dict(response.headers)
-        )
-else:
-    # Direct fallback when running monolithically or in local dev
-    ROOT_DIR = Path(__file__).resolve().parent.parent
-    BACKEND_DIR = ROOT_DIR / "backend"
-    if str(BACKEND_DIR) not in sys.path:
-        sys.path.insert(0, str(BACKEND_DIR))
-    from app.main import app
+        try:
+            response = await client.request(
+                method=request.method,
+                url=url,
+                params=dict(request.query_params),
+                headers=headers,
+                content=body
+            )
+            return Response(
+                content=response.content,
+                status_code=response.status_code,
+                headers=dict(response.headers)
+            )
+        except Exception as err:
+            return Response(
+                content=f'{{"error": "Backend gateway error: {str(err)}"}}',
+                status_code=502,
+                media_type="application/json"
+            )
+
+    return Response(
+        content='{"status": "online", "service": "api-gateway"}',
+        status_code=200,
+        media_type="application/json"
+    )
